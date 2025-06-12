@@ -36,7 +36,10 @@ func Try3[T1 any, T2 any, T3 any](v1 T1, v2 T2, v3 T3, e error) (T1, T2, T3) {
 
 // run and catch error from panic
 //
-//go:linkname Enter ctrl.RunAndCatch
+//go:linkname Enter RunAndCatch
 func Enter(f func()) error
 
 func Scope(f func()) { f() }
+
+func Eval[T any](f func() T) T                   { return f() }
+func Eval2[T any, U any](f func() (T, U)) (T, U) { return f() }

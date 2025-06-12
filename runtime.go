@@ -1,6 +1,7 @@
 package ctrl
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 	"strings"
@@ -37,11 +38,12 @@ func StackTrace() CallStack {
 
 func (stack CallStack) String() string {
 	var sb strings.Builder
+	sb.Grow(1 << 10)
 	for n, frame := range stack.frames {
 		if n > 0 {
 			sb.WriteRune('\n')
 		}
-		fmt.Fprintf(&sb, "->[#%02d][%s]@%s:%d", n, frame.name, frame.file, frame.line)
+		fmt.Fprintf(&sb, "[#%02d][%s]@%s:%d", n, frame.name, frame.file, frame.line)
 	}
 	return sb.String()
 }
@@ -55,33 +57,28 @@ func NewPanicError(stack CallStack, reason any) *PanicError {
 	return &PanicError{stack: stack, reason: reason}
 }
 
+func (info *PanicError) Unwrap() error {
+	if e, ok := info.reason.(error); ok {
+		return e
+	} else {
+		return nil
+	}
+}
+
 func (info *PanicError) reasonS() (s string) {
 	switch v := info.reason.(type) {
 	case string:
 		s = v
 	case error:
-		s = fmt.Sprintf("error: %s", v.Error())
+		s = v.Error()
 	default:
 		s = fmt.Sprintf("unexpected: %+v", v)
 	}
 	return
 }
 
-func (info *PanicError) String() string {
-	var sb strings.Builder
-	sb.Grow(1 << 10)
-	sb.WriteString(info.reasonS())
-	sb.WriteRune('\n')
-	sb.WriteString("=== stack trace ===")
-	sb.WriteRune('\n')
-	sb.WriteString(info.stack.String())
-	sb.WriteRune('\n')
-	sb.WriteString("===================")
-	return sb.String()
-}
-
 func (info *PanicError) Error() string {
-	return info.String()
+	return info.reasonS()
 }
 
 func RunAndCatch(exec func()) (e error) {
@@ -93,4 +90,28 @@ func RunAndCatch(exec func()) (e error) {
 	}()
 	exec()
 	return
+}
+
+func StackUnroll(e error) (string, bool) {
+	var info *PanicError
+	var stacks []CallStack
+	for errors.As(e, &info) {
+		stacks = append(stacks, info.stack)
+		e = info.Unwrap()
+	}
+
+	if len(stacks) == 0 {
+		return "no stack trace available", false
+	}
+
+	var sb strings.Builder
+	sb.Grow(4 << 10)
+	for i := 0; i < len(stacks); i++ {
+		stack := stacks[len(stacks)-1-i]
+		fmt.Fprintf(&sb, "===== callstack %d =====\n", i+1)
+		sb.WriteString(stack.String())
+		sb.WriteRune('\n')
+	}
+	sb.WriteString("=======================")
+	return sb.String(), true
 }
