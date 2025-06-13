@@ -1,9 +1,5 @@
 package ctrl
 
-import (
-	_ "unsafe"
-)
-
 func Try(e error) {
 	if e != nil {
 		panic(e)
@@ -34,10 +30,9 @@ func Try3[T1 any, T2 any, T3 any](v1 T1, v2 T2, v3 T3, e error) (T1, T2, T3) {
 	}
 }
 
-// run and catch error from panic
-//
-//go:linkname Enter RunAndCatch
-func Enter(f func()) error
+func Enter(f func()) error {
+	return runAndCatch(f)
+}
 
 func Scope(f func()) { f() }
 

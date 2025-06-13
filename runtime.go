@@ -81,7 +81,7 @@ func (info *PanicError) Error() string {
 	return info.reasonS()
 }
 
-func RunAndCatch(exec func()) (e error) {
+func runAndCatch(exec func()) (e error) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			stack := StackTrace()
