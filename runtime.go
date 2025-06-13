@@ -1,4 +1,4 @@
-package ctrl
+package onerr
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package ctrl
+package onerr
 
 func Try(e error) {
 	if e != nil {
